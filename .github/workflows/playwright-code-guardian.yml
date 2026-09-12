@@ -74,7 +74,7 @@ jobs:
           async function run() {
             try {
               const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
+                model: 'gemini-3.6-flash',
                 contents: systemPrompt + '\n\nCode to review:\n' + codeContent,
               });
               fs.writeFileSync('review_result.md', response.text);
