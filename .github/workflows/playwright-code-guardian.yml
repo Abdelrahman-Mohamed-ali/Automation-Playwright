@@ -8,18 +8,25 @@ on:
       - '**/*.spec.ts'
       - '**/*.spec.js'
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   review-code:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Get Changed Files
         id: changed-files
@@ -36,7 +43,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          npm install -g @google/genai
+          npm install @google/genai
 
           node -e "
           const fs = require('fs');
@@ -52,6 +59,11 @@ jobs:
             }
           });
 
+          if (!codeContent) {
+            fs.writeFileSync('review_result.md', 'No spec files modified.');
+            process.exit(0);
+          }
+
           const systemPrompt = \`Act as 'Playwright Code Guardian', a Senior Test Automation Reviewer.
           Review the following Playwright code for:
           1. Locator Health (prefer getByRole, getByTestId over long XPath/CSS).
@@ -60,11 +72,16 @@ jobs:
           4. Provide complete refactored code snippets.\`;
 
           async function run() {
-            const response = await ai.models.generateContent({
-              model: 'gemini-2.5-flash',
-              contents: systemPrompt + '\n\nCode to review:\n' + codeContent,
-            });
-            fs.writeFileSync('review_result.md', response.text);
+            try {
+              const response = await ai.models.generateContent({
+                model: 'gemini-3.6-flash',
+                contents: systemPrompt + '\n\nCode to review:\n' + codeContent,
+              });
+              fs.writeFileSync('review_result.md', response.text);
+            } catch (err) {
+              console.error(err);
+              process.exit(1);
+            }
           }
           run();
           "
@@ -76,10 +93,12 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const reviewText = fs.readFileSync('review_result.md', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## 🛡️ Playwright Code Guardian Review\n\n${reviewText}`
-            });
+            if (fs.existsSync('review_result.md')) {
+              const reviewText = fs.readFileSync('review_result.md', 'utf8');
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🛡️ Playwright Code Guardian Review\n\n${reviewText}`
+              });
+            }
