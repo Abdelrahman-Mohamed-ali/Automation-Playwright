@@ -1,59 +1,62 @@
-npm install @google/genai
+- name: Run Gemini Review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          npm install @google/genai
 
-node -e "
-const fs = require('fs');
-const { GoogleGenAI } = require('@google/genai');
+          node -e "
+          const fs = require('fs');
+          const { GoogleGenAI } = require('@google/genai');
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const files = (process.env.CHANGED_FILES || '').split(' ');
+          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+          const files = (process.env.CHANGED_FILES || '').split(' ');
 
-let codeContent = '';
-files.forEach(file => {
-  if (fs.existsSync(file)) {
-    codeContent += \`\n--- File: \${file} ---\n\` + fs.readFileSync(file, 'utf8');
-  }
-});
+          let codeContent = '';
+          files.forEach(file => {
+            if (fs.existsSync(file)) {
+              codeContent += \`\n--- File: \${file} ---\n\` + fs.readFileSync(file, 'utf8');
+            }
+          });
 
-if (!codeContent.trim()) {
-  fs.writeFileSync('review_result.md', 'No spec files modified.');
-  process.exit(0);
-}
+          if (!codeContent.trim()) {
+            fs.writeFileSync('review_result.md', 'No spec files modified.');
+            process.exit(0);
+          }
 
-const systemPrompt = \`Act as 'Playwright Code Guardian', a Senior Test Automation Reviewer.
-Review the following Playwright code for:
-1. Locator Health (prefer getByRole, getByTestId over long XPath/CSS).
-2. Async & Waiting (flag missing await, remove waitForTimeout).
-3. Curriculum Alignment (reference modules like B13, B16, I11, S10).
-4. Provide complete refactored code snippets.\`;
+          const systemPrompt = \`Act as 'Playwright Code Guardian', a Senior Test Automation Reviewer.
+          Review the following Playwright code for:
+          1. Locator Health (prefer getByRole, getByTestId over long XPath/CSS).
+          2. Async & Waiting (flag missing await, remove waitForTimeout).
+          3. Curriculum Alignment (reference modules like B13, B16, I11, S10).
+          4. Provide complete refactored code snippets.\`;
 
-async function generateWithRetry(retries = 3, delay = 5000) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: 'Code to review:\n' + codeContent,
-        config: {
-          systemInstruction: systemPrompt
-        }
-      });
-      return response.text;
-    } catch (err) {
-      console.warn(\`Attempt \${i + 1} failed: \${err.message}\`);
-      if (i === retries - 1) throw err;
-      await new Promise(res => setTimeout(res, delay));
-    }
-  }
-}
+          async function generateWithRetry(retries = 3, delay = 5000) {
+            for (let i = 0; i < retries; i++) {
+              try {
+                const response = await ai.models.generateContent({
+                  model: 'gemini-2.5-flash',
+                  contents: 'Code to review:\n' + codeContent,
+                  config: { systemInstruction: systemPrompt }
+                });
+                return response.text;
+              } catch (err) {
+                console.warn(\`Attempt \${i + 1} failed: \${err.message}\`);
+                if (i === retries - 1) throw err;
+                await new Promise(res => setTimeout(res, delay));
+              }
+            }
+          }
 
-async function run() {
-  try {
-    const reviewText = await generateWithRetry();
-    fs.writeFileSync('review_result.md', reviewText);
-    console.log('Review result successfully generated.');
-  } catch (err) {
-    console.error('Final Error:', err);
-    process.exit(1);
-  }
-}
-run();
-"
+          async function run() {
+            try {
+              const reviewText = await generateWithRetry();
+              fs.writeFileSync('review_result.md', reviewText);
+              console.log('Review result successfully generated.');
+            } catch (err) {
+              console.error('Final Error:', err);
+              process.exit(1);
+            }
+          }
+          run();
+          "
