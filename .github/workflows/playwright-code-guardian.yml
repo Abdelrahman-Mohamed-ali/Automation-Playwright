@@ -31,9 +31,11 @@
           3. Curriculum Alignment (reference modules like B13, B16, I11, S10).
           4. Provide complete refactored code snippets.\`;
 
+          // دالة إعادة المحاولة (Retry Mechanism)
           async function generateWithRetry(retries = 3, delay = 5000) {
             for (let i = 0; i < retries; i++) {
               try {
+                console.log(\`Attempt \${i + 1} to call Gemini API...\`);
                 const response = await ai.models.generateContent({
                   model: 'gemini-2.5-flash',
                   contents: 'Code to review:\n' + codeContent,
@@ -43,6 +45,7 @@
               } catch (err) {
                 console.warn(\`Attempt \${i + 1} failed: \${err.message}\`);
                 if (i === retries - 1) throw err;
+                console.log(\`Waiting \${delay / 1000} seconds before retrying...\`);
                 await new Promise(res => setTimeout(res, delay));
               }
             }
