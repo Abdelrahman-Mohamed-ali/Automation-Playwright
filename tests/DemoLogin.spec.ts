@@ -14,7 +14,7 @@ await login.open()
 await login.fillLoginData()
 
 await expect(page).toHaveURL("https://www.saucedemo.com/inventory.html")
-await expect(page.getByText("Swag Labs")).toBeVisible()
-
+await expect(page.getByText("Swag Labs")).toBeVisible();
+//test AI new Skill
 
 })
