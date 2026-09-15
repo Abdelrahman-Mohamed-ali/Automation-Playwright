@@ -1,64 +1,69 @@
-- name: Run Gemini Review
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        run: |
-          npm install @google/genai
+- name: Run Gemini Code Review
+  shell: /usr/bin/bash -e {0}
+  env:
+    GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    CHANGED_FILES: tests/BasePageAcademy.ts tests/ShopPage.ts tests/shop.spec.ts
+  run: |
+    npm install @google/genai
+    node -e "
+    const fs = require('fs');
+    const { GoogleGenAI } = require('@google/genai');
 
-          node -e "
-          const fs = require('fs');
-          const { GoogleGenAI } = require('@google/genai');
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const files = (process.env.CHANGED_FILES || '').split(' ').filter(Boolean);
 
-          const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-          const files = (process.env.CHANGED_FILES || '').split(' ');
+    let codeContent = '';
+    files.forEach(file => {
+      if (fs.existsSync(file)) {
+        codeContent += \`\n--- File: \${file} ---\n\` + fs.readFileSync(file, 'utf8');
+      }
+    });
 
-          let codeContent = '';
-          files.forEach(file => {
-            if (fs.existsSync(file)) {
-              codeContent += \`\n--- File: \${file} ---\n\` + fs.readFileSync(file, 'utf8');
-            }
-          });
+    if (!codeContent) {
+      fs.writeFileSync('review_result.md', 'No spec files modified.');
+      process.exit(0);
+    }
 
-          if (!codeContent.trim()) {
-            fs.writeFileSync('review_result.md', 'No spec files modified.');
-            process.exit(0);
-          }
+    const systemPrompt = \`Act as 'Playwright Code Guardian', a Senior Test Automation Reviewer.
+    Review the following Playwright code for:
+    1. Locator Health (prefer getByRole, getByTestId over long XPath/CSS).
+    2. Async & Waiting (flag missing await, remove waitForTimeout).
+    3. Curriculum Alignment (reference modules like B13, B16, I11, S10).
+    4. Provide complete refactored code snippets.\`;
 
-          const systemPrompt = \`Act as 'Playwright Code Guardian', a Senior Test Automation Reviewer.
-          Review the following Playwright code for:
-          1. Locator Health (prefer getByRole, getByTestId over long XPath/CSS).
-          2. Async & Waiting (flag missing await, remove waitForTimeout).
-          3. Curriculum Alignment (reference modules like B13, B16, I11, S10).
-          4. Provide complete refactored code snippets.\`;
-
-          async function generateWithRetry(retries = 4, delay = 10000) {
-            for (let i = 0; i < retries; i++) {
-              try {
-                console.log(\`Attempt \${i + 1}: Contacting Gemini API...\`);
-                const response = await ai.models.generateContent({
-                  model: 'gemini-3.6-flash',
-                  contents: 'Code to review:\n' + codeContent,
-                  config: { systemInstruction: systemPrompt }
-                });
-                return response.text;
-              } catch (err) {
-                console.warn(\`Attempt \${i + 1} failed (\${err.message})...\`);
-                if (i === retries - 1) throw err;
-                console.log(\`Waiting \${delay / 1000} seconds before retrying...\`);
-                await new Promise(res => setTimeout(res, delay));
-              }
-            }
-          }
-
-          async function run() {
-            try {
-              const reviewText = await generateWithRetry();
-              fs.writeFileSync('review_result.md', reviewText);
-              console.log('Review result successfully generated.');
-            } catch (err) {
-              console.error('Final Failure:', err);
-              process.exit(1);
+    async function generateWithRetry(contents, retries = 3, delay = 3000) {
+      const models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+      
+      for (const model of models) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            console.log(\`Attempting generation with model \${model} (Attempt \${attempt})\`);
+            const response = await ai.models.generateContent({
+              model,
+              contents,
+            });
+            return response.text;
+          } catch (err) {
+            console.warn(\`Model \${model} attempt \${attempt} failed: \${err.message}\`);
+            if (err.status === 503 && attempt < retries) {
+              await new Promise(res => setTimeout(res, delay * attempt));
+            } else if (attempt === retries) {
+              console.warn(\`Switching model away from \${model}...\`);
             }
           }
-          run();
-          "
+        }
+      }
+      throw new Error('All model attempts failed due to service unavailability.');
+    }
+
+    async function run() {
+      try {
+        const text = await generateWithRetry(systemPrompt + '\n\nCode to review:\n' + codeContent);
+        fs.writeFileSync('review_result.md', text);
+      } catch (err) {
+        console.error(err);
+        process.exit(1);
+      }
+    }
+    run();
+    "
