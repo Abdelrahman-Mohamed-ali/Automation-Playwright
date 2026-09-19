@@ -4,6 +4,7 @@ import { RegisterPage } from "./RegisterPage";
 import { loginPage } from "./LoginPage";
 import { addProduct } from "./AddProduct";
 import { PaymentMethod } from "./Payment";
+import { CheckOrder } from "./OrderPage";
 
 test.use({
     launchOptions: { slowMo: 500 },
@@ -23,16 +24,21 @@ const login = new loginPage(page)
 await login.Login()
 
 
-
 const link=new RegisterPage(page)
 await link.openLink()
+
 
 const product = new addProduct(page)
 await product.addToProduct()
 
 
+const payment= new PaymentMethod(page)
+await payment.pay()
+ 
 
- const payment= new PaymentMethod(page)
- await payment.pay()
+const order=new CheckOrder(page)
+await order.ClickDownload()
+ 
+
 
 })
