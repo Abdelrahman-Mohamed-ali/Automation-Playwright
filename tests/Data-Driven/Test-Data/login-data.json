@@ -1,0 +1,31 @@
+
+[
+{
+
+    "Email":"Abdooo222@gmail.com" ,
+    "Password" : "Test@2024" ,
+    "expectedResult": "success"
+}
+,
+{
+
+    "Email":"abdelrahmanmohammed00@gmail.com" ,
+    "Password" : "Test@2024#" ,
+    "expectedResult": "incorect email or password"
+}
+,
+{
+
+    "Email":"Test@gmail.com" ,
+    "Password" : "" ,
+    "expectedResult": "*Password is required "
+}
+,
+{
+
+    "Email":"" ,
+    "Password" : "" ,
+    "expectedResult": "*Email is required & *Password is required "
+}
+
+]
