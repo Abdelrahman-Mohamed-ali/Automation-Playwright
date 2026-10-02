@@ -1,14 +1,14 @@
-
 [
-{
-    "productName":  "ADIDAS ORIGINAL" 
-} 
-,
-{
- "productName": "ZARA COAT 3" 
-}
-,
-{
- "productName": "iphone 13 pro" 
-}
+  {
+    "productName": "ADIDAS ORIGINAL",
+    "status": "valid"
+  },
+  {
+    "productName": "ZARA COAT 3",
+    "status": "valid"
+  },
+  {
+    "productName": "IPHONE 99 PRO MAX",
+    "status": "invalid"
+  }
 ]

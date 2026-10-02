@@ -18,6 +18,15 @@ export class addProduct
      
     }
 
+async isProductAvailable(ProductName: string): Promise<boolean> {
+
+    const product = this.page
+        .locator(".card")
+        .filter({ hasText: ProductName.trim() });
+
+    return await product.count() > 0;
+}
+
     async addToProduct(ProductName: string): Promise<void> {
     const addTocart = this.page
         .locator(".card")

@@ -22,24 +22,51 @@ const login = new loginPage(page)
 await login.openPage()
 await login.Login(user.Email,user.Password)
 
+
 switch(user.expectedResult)
 {
     case "success":
         await expect(page).toHaveURL("https://rahulshettyacademy.com/client/#/dashboard/dash");
-        console.log(Products[0].productName)
+        const add = new addProduct(page);
+       let productAdded = false;
+
+for (const product of Products) {
+
+    const productExists =
+        await add.isProductAvailable(product.productName);
+
+    if (product.status === "valid") {
+
+        expect(productExists).toBe(true);
+
+        await add.addToProduct(product.productName);
+
+        productAdded = true;
+    }
+
+    else if (product.status === "invalid") {
+
+        expect(productExists).toBe(false);
+
+        console.log(
+            `Product "${product.productName}" was not found`
+        );
+    }
+}
+
+if (productAdded) {
+
+    await add.goToCheckout();
+
+    const pay = new PaymentMethod(page);
+    await pay.pay();
+
+    const check = new CheckOrder(page);
+    await check.ClickDownload();
+}
+
+break;
        
-        const add = new addProduct (page)
-        await add.addToProduct(Products[0].productName)
-
-        const checkout=new addProduct(page)
-        await checkout.goToCheckout()
-
-        const pay = new PaymentMethod(page)
-        await pay.pay()
-
-        const check = new CheckOrder(page)
-        await check.ClickDownload()
-       break 
 
      case "incorect email or password" :
         await expect(page.getByText(/Incorrect email or password/i)).toBeVisible();
