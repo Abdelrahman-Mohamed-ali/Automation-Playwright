@@ -1,0 +1,12 @@
+{
+  "creditCard": {
+    "number": "4542 9931 9292 2200",
+    "expiryMonth": "02",
+    "expiryYear": "22",
+    "cvv": "123",
+    "nameOnCard": "Abdelrahman Mohammed"
+  },
+  "shipping": {
+    "country": "Egypt"
+  }
+}

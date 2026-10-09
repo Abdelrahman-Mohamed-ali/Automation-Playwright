@@ -1,0 +1,34 @@
+[
+  {
+    "userEmail": "Abdooo222@gmail.com",
+    "userPassword": "Test@2024",
+    "status": "valid" ,
+    "products": [
+      "ZARA COAT 3",
+      "ADIDAS ORIGINAL"
+    ]
+  },
+  {
+    "userEmail": "invalid2@gmail.com",
+    "userPassword": "wrong456",
+    "status": "invalid"
+    , "products": [
+      "ZARA COAT 3",
+      "ADIDAS ORIGINAL"
+    ]
+  },
+  {
+    "userEmail": "valid@gmail.com",
+    "userPassword": "correct123",
+    "status": "invalid"
+    , "products": [
+      "ZARA COAT 3",
+      "ADIDAS ORIGINAL"
+    ]
+    
+  } 
+
+ 
+]
+
+
